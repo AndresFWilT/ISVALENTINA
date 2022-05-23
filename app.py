@@ -71,7 +71,27 @@ def ingresar_contraseña():
     # Por POST se trae el tipo: consulta retiro o transferencia
     _tipo = request.form['tipo']
     message = "Para "+_tipo
-    return render_template('contraseña.html', message = message,tipo = _tipo)        
+    return render_template('contraseña.html', message = message,tipo = _tipo)   
+
+@app.route('/validatePassword', methods=['POST'])
+def contrasena_validar():
+    # Por POST se trae la contraseña ingresada y el tipo: consulta, retiro o transferencia 
+    _tipo = request.form['tipo']
+    _pass = request.form['pass']
+    if(validar_contraseña(_pass)):
+        verificacion = transactions.login(tarjeta['id_tarjeta'],int(_pass))
+        if (verificacion):
+            print("contraseña correcta")
+            message = "" 
+            if (_tipo == "consultas"):
+                return render_template('/consultas.html',message = message)
+            elif(_tipo == "retiros"):
+                return render_template('/retiros.html',message = message)
+            elif(_tipo == "transferencias"):  
+                return render_template('/transferencias.html',message = message)
+        message = "Contraseña incorrecta"      
+        return render_template('/contraseña.html',message = message)
+
 ## Validaciones
 
 # Validacion tarjeta CVV
