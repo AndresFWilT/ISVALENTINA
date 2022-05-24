@@ -1,7 +1,7 @@
 import mysql.connector
 from mysql.connector import Error
 
-
+# @Author: AndresFWilT
 
 def gen_cnx():
     try:

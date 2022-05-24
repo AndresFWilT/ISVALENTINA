@@ -7,11 +7,12 @@ import os
 from connectorMySQL import gen_cnx
 from transactions import Transactions
 
-
 cnx = gen_cnx()
 cursor = cnx.cursor()
 transactions = Transactions(cursor)
 app = Flask(__name__)
+
+# @Author: AndresFWilT
 
 ## Endpoint para probar la conexion con la BD
 @app.route('/con')

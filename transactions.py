@@ -1,6 +1,7 @@
 from datetime import datetime
 from mysql.connector import Error
-import mysqlx
+
+# @Author: AndresFWilT
 
 class Transactions:
 
