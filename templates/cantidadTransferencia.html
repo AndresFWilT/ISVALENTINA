@@ -6,15 +6,18 @@
 {% block content %}
     {{ super() }}
     <h4 class="text-center title">{{message}}</h1>
-    <h2 class="subtitulo">Retirar</h1>
+    <h2 class="subtitulo"> Transferencia </h1>
         </br></br></br>
-        <h3 class="subtitulo"></h3>
+        <h3 class="subtitulo">Se va a transferir a la cuenta: <b>{{tarjeta_transferencia['id_tarjeta']}}</b> que pertenece al usuario <b>{{tarjeta_transferencia['username']}}</b></h3>  
         <div class="card text-center" style="width: 35%; margin: auto">
-            <form action="/retirarCantidadDinero" method="post">
+            <form action="/transferirDinero" method="post">
               <ul class="list-group list-group-flush">
                 <li class="list-group-item">
-                  <label> Digita la cantidad a retirar </label>
+                  <label> Digita la cantidad a transferir </label>
                 </br>
+                <input type="hidden" value="{{tarjeta_transferencia['id_tarjeta']}}" name="tarjeta">
+                <input type="hidden" value="{{tarjeta_transferencia['username']}}" name="usuario">
+                <input type="hidden" value="{{tarjeta_transferencia['id_cuenta']}}" name="cuenta">
                   <input
                     style="text-align: center"
                     id="valor"
@@ -26,11 +29,10 @@
                   />
                 </li>
               </ul>
-              <small id="emailHelp" class="form-text text-muted">Recuerda retirar cantidades superiores a 20000 e inferiores a 2'700.000</small>
               <ul class="list-group list-group-flush">
                 <li class="list-group-item">
                   <button class="btn btn-success" type="submit">
-                    Retirar
+                    Transferir
                   </button>
                 </li>
               </ul>

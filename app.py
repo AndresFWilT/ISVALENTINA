@@ -149,14 +149,53 @@ def buscar_cuenta():
     _cuenta = request.form['cuenta']
     if(validar_cuenta(_cuenta)):
         tarjeta_transferencia = transactions.get_tarjetas_by_id_cuenta(int(_cuenta))
-        
-        message=""
-        return render_template('/verificarCuentaTransferencia.html',message = message)
+        if(tarjeta['username'] == tarjeta_transferencia['username']):
+            message="No se puede transferir dinero a usted mismo"  
+            return render_template('/transferencias.html',message = message)    
+        else:
+            message=""  
+            return render_template('/cantidadTransferencia.html',message = message,tarjeta_transferencia = tarjeta_transferencia)
     else:
         message = "Valor ingresado no valido"
         return render_template('/transferencias.html',message = message)
 
+@app.route('/transferirDinero',methods=['POST'])
+def enviar_dinero():
+    _user = request.form['usuario']
+    _card = request.form['tarjeta']
+    _cuenta = request.form['cuenta']
+    _valor = request.form['valor']
+    _tarjeta_transferencia = {
+        'id_tarjeta':_card,
+        'id_cuenta':_cuenta,
+        'username':_user
+    }
+    message = "Algo paso"
+    try:
+        print("Antes de saldo")
+        saldo = transactions.get_cantidad_dinero(tarjeta['id_cuenta'])[0]
+        # Se usa el metodo validar_cuenta para verificar que se envie un numero mayor a 0
+        if(validar_saldo_retirar(int(_valor),saldo) and validar_mayor_cero(_valor)):
+            transactions.update_retiro(tarjeta['id_cuenta'],int(_valor))
+            nuevo_saldo = transactions.get_cantidad_dinero(tarjeta['id_cuenta'])[0]
+            tiempo = transactions.crear_transaccion(int(_valor),tarjeta['id_tarjeta'],"Retiro")
+            datos_transaccion = transactions.get_id_transaccion(tiempo['hora'],tiempo['fecha'],tarjeta['id_tarjeta'],"Retiro",int(_valor))
+            transactions.update_transferencia(int(_cuenta),int(_valor))
+            message = "Transferencia realizada con exito"
+            cnx.commit()
+            return render_template('/recibo.html',nuevo_saldo = nuevo_saldo,valor = _valor,message = message,transaccion = datos_transaccion,tarjeta = tarjeta)
+    except Error as e:
+        message = "Algo sucedio al realizar la transferencia de la cantidad valor ingresado"
+        return render_template('/cantidadTransferencia.html',message = message,tarjeta_transferencia = _tarjeta_transferencia)
+    
+    return render_template('/cantidadTransferencia.html',message = message,tarjeta_transferencia = _tarjeta_transferencia)
+        
+
 ## Validaciones
+def validar_mayor_cero(texto):
+    if(len(texto)<=0):
+        return False
+    return texto.isnumeric()
 
 # Validacion para entero
 def validar_cuenta(texto):
@@ -197,6 +236,13 @@ def validar_valor_ingresado(valor):
 # validacion para no entregar monedas
 def validacion_no_monedas(valor):
     if ((valor[len(valor)-1] == '0') and (valor[len(valor)-2] == '0') and (valor[len(valor)-3] == '0')):
+        return True
+    else:
+        return False
+
+# validacion para que el numero ingresado sea mayor a 0
+def validar_numero(valor):
+    if(valor > 0):
         return True
     else:
         return False

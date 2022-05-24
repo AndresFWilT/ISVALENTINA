@@ -39,16 +39,18 @@ class Transactions:
 
 
     def get_tarjetas_by_id_cuenta(self, id_cuenta):
-        query = "SELECT id_tarjeta, id_cuenta, usuario, constraseña FROM `Tarjeta` WHERE id_cuenta='{}'".format(id_cuenta)
+        query = "SELECT id_tarjeta, id_cuenta, usuario FROM Tarjeta WHERE id_cuenta={}".format(id_cuenta)
         try:
             self.cursor.execute(query)
-            res = []
-            for (id_tarjeta, id_cuenta, username, password) in self.cursor:
-                res.add({'id_tarjeta': id_tarjeta, 'id_cuenta': id_cuenta, 'username': username, 'password': password})
-
-            return res
-        except Error as ex:
-            print("error while creating a xa:", ex)
+            for (id_tarjeta, id_cuenta, username) in self.cursor:
+                return {
+                    'id_tarjeta': id_tarjeta,
+                    'id_cuenta': id_cuenta,
+                    'username': username,
+                }
+            return None
+        except Error as e:
+            print("Error al hacer el SELECT de la cuenta transferencia:", e)
             print("this is the query:", query)
 
     def get_cuenta_by_tarjeta(self, id_tarjeta):
@@ -76,6 +78,15 @@ class Transactions:
         try:
             self.cursor.execute(query)
             print("Retiro realizado")
+        except Error as e:
+            print("Error",e)
+            print("Query"+query)
+
+    def update_transferencia(self,id_cuenta,valor):
+        query = f"UPDATE Cuenta cu SET cu.cantidad_dinero = (cu.cantidad_dinero + {valor}) WHERE cu.id_cuenta = {id_cuenta}"
+        try:
+            self.cursor.execute(query)
+            print("Transferencia realizada")
         except Error as e:
             print("Error",e)
             print("Query"+query)
