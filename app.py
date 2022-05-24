@@ -1,8 +1,6 @@
 # imports
-from http.client import NON_AUTHORITATIVE_INFORMATION
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request
 from config import DevelopmentConfig
-from jinja2 import Environment, FileSystemLoader
 import mysql.connector
 from mysql.connector import Error
 import os
@@ -15,6 +13,7 @@ cursor = cnx.cursor()
 transactions = Transactions(cursor)
 app = Flask(__name__)
 
+## Endpoint para probar la conexion con la BD
 @app.route('/con')
 def connection():
     try:
@@ -34,20 +33,23 @@ def connection():
     except Error as ex:
         print("error durante la conexion:", ex)
 
-## app.route = endpoint o sitio a donde me redirige un boton o un ancla <a></a>
+## app.route = endpoint o sitio a donde me redirige un Form o un ancla <a></a>
 @app.route('/')
 def init():
     return index()
 
+## Endpoint inicio
 @app.route('/index')
 def index():
     return render_template('index.html')
 
+## Endpoint para vista ingresar
 @app.route('/ingresar')
 def login():
     message= ""
     return render_template('ingresar.html', message = message)
 
+##Endpoint al que se redirige despues de darle al boton para ingresar con CVV
 @app.route('/login', methods=['POST'])
 def loginUser():
     if request.method == 'POST':
@@ -83,16 +85,84 @@ def contrasena_validar():
         if (verificacion):
             print("contraseña correcta")
             message = "" 
+            saldo = transactions.get_cantidad_dinero(tarjeta['id_cuenta'])
+            messageSaldo = "Estimado "+tarjeta['username']+", su saldo actual es de: "+ str(saldo[0])
             if (_tipo == "consultas"):
-                return render_template('/consultas.html',message = message)
+                return render_template('/consultas.html',message = message,messageSaldo = messageSaldo)
             elif(_tipo == "retiros"):
                 return render_template('/retiros.html',message = message)
             elif(_tipo == "transferencias"):  
                 return render_template('/transferencias.html',message = message)
         message = "Contraseña incorrecta"      
-        return render_template('/contraseña.html',message = message)
+        return render_template('/contraseña.html',message = message,tipo = _tipo)
+
+@app.route('/retirar',methods=['POST'])
+def retirar_por_valor():
+    # Por post se trae el valor seleccionado de los botones
+    _valor = request.form['valor']
+    saldo = transactions.get_cantidad_dinero(tarjeta['id_cuenta'])[0]
+    if(validar_saldo_retirar(int(_valor),saldo)):
+        transactions.update_retiro(tarjeta['id_cuenta'],int(_valor))
+        nuevo_saldo = transactions.get_cantidad_dinero(tarjeta['id_cuenta'])[0]
+        tiempo = transactions.crear_transaccion(int(_valor),tarjeta['id_tarjeta'],"Retiro")
+        datos_transaccion = transactions.get_id_transaccion(tiempo['hora'],tiempo['fecha'],tarjeta['id_tarjeta'],"Retiro",int(_valor))
+        message = "Retiro realizado con exito"
+        cnx.commit()
+        return render_template('/recibo.html',nuevo_saldo = nuevo_saldo,valor = _valor,message = message,transaccion = datos_transaccion,tarjeta = tarjeta)
+    else:
+        message = "No puede retirar esa cantidad de dinero actualmente"
+        return render_template('/retiros.html',message = message)
+
+@app.route('/cantidadRetiro')
+def vista_retirar_cantidad():
+    message = ''
+    return render_template('/retirarCantidad.html',message = message)
+
+@app.route('/retirarCantidadDinero',methods=['POST'])
+def retirar_valor_ingresado():
+    # Por post se trae el valor digitado ingresado por el usuario
+    _valor = request.form['valor']
+    saldo = transactions.get_cantidad_dinero(tarjeta['id_cuenta'])[0]
+    try:
+        if(validar_valor(_valor) and validar_valor_ingresado(int(_valor)) and validar_saldo_retirar(int(_valor),saldo)):
+            if(validacion_no_monedas(_valor)):
+                transactions.update_retiro(tarjeta['id_cuenta'],int(_valor))
+                nuevo_saldo = transactions.get_cantidad_dinero(tarjeta['id_cuenta'])[0]
+                tiempo = transactions.crear_transaccion(int(_valor),tarjeta['id_tarjeta'],"Retiro")
+                datos_transaccion = transactions.get_id_transaccion(tiempo['hora'],tiempo['fecha'],tarjeta['id_tarjeta'],"Retiro",int(_valor))
+                message = "Retiro realizado con exito"
+                cnx.commit()
+                return render_template('/recibo.html',nuevo_saldo = nuevo_saldo,valor = _valor,message = message,transaccion = datos_transaccion,tarjeta = tarjeta)
+            else:
+                message = "No se pueden retirar monedas"
+                return render_template('/retirarCantidad.html',message = message) 
+        else:
+            message = "Valor ingresado no valido"
+            return render_template('/retirarCantidad.html',message = message)
+    except Error as e:
+        message = "Algo sucedio en retirar cantidad valor ingresado"
+        return render_template('/retirarCantidad.html',message = message)
+
+@app.route('/buscarCuenta',methods=['POST'])
+def buscar_cuenta():
+    # por post se trae el # de cuenta
+    _cuenta = request.form['cuenta']
+    if(validar_cuenta(_cuenta)):
+        tarjeta_transferencia = transactions.get_tarjetas_by_id_cuenta(int(_cuenta))
+        
+        message=""
+        return render_template('/verificarCuentaTransferencia.html',message = message)
+    else:
+        message = "Valor ingresado no valido"
+        return render_template('/transferencias.html',message = message)
 
 ## Validaciones
+
+# Validacion para entero
+def validar_cuenta(texto):
+    if(len(texto)>1):
+        return False
+    return texto.isnumeric()
 
 # Validacion tarjeta CVV
 def validar_tarjeta(texto):
@@ -105,6 +175,31 @@ def validar_contraseña(texto):
     if len(texto)>4:
         return False
     return texto.isnumeric()
+
+# Validar si saldo a retirar es mayor que saldo actual
+def validar_saldo_retirar(valor1,valor2):
+    if(valor1 > valor2):
+        return False
+    return True
+
+#validar saldo ingresado
+def validar_valor(valor):
+    if len(valor) < 5 or len(valor) > 7:
+        return False
+    return valor.isnumeric()
+
+# validar valor
+def validar_valor_ingresado(valor):
+    if valor < 20000 or valor > 2700000:
+        return False
+    return True
+
+# validacion para no entregar monedas
+def validacion_no_monedas(valor):
+    if ((valor[len(valor)-1] == '0') and (valor[len(valor)-2] == '0') and (valor[len(valor)-3] == '0')):
+        return True
+    else:
+        return False
 
 # main
 if __name__ == "__main__":
