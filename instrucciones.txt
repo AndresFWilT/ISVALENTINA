@@ -1,0 +1,43 @@
+Para descargar el proyecto desde GitHub
+
+Condiciones:
+
+- Tener Git Bash
+- Tener Python 3
+Esto en el dispositivo donde se va a ejecutar el proyecto
+
+ubicarse en el folder deseado en donde se va a alojar el proyecto, desde el terminal
+Algunos comandos:
+    (cd = change directory, mkdir = crear directorio)
+
+Una vez situado en el folder donde se quiere alojar el proyecto, usar el comando
+
+    git clone url
+
+donde la url es el link del proyecto del repositorio (GitHub)
+
+Una vez descargado, se procede a crear el entorno virtual de python, con el comando
+
+    python -m venv venv
+
+
+una vez creado el entorno virtal, se accede a dicho entorno con:
+
+    venv/scripts/activate
+
+Luego se procede a instalar las librerias necesarias para correr el proyecto, con sus dependencias
+
+    pip install -r requirements.txt
+
+Una vez realizado todo esto, se tiene instalado el proyecto
+
+
+PARA EJECUTAR
+
+En dado caso de no estar dentro del entorno virtual (venv)
+
+    venv/scripts/activate
+
+Si se esta, o una vez dentro, para ejecutar la aplicacion se usa:
+
+    python app.py
